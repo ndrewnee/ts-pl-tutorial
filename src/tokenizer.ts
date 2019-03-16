@@ -12,7 +12,7 @@ export interface TokenStreamer {
     next(): Token | null
     peek(): Token | null
     eof(): boolean
-    croak(msg: string): void
+    throwError(msg: string): void
 }
 
 export class TokenStream implements TokenStreamer {
@@ -24,10 +24,10 @@ export class TokenStream implements TokenStreamer {
     private static punctuations = ",;(){}[]"
     constructor(input: InputStreamer) {
         this.input = input
-        this.croak = input.croak
+        this.throwError = input.throwError
         this.current = null
     }
-    croak: (msg: string) => void
+    throwError: (msg: string) => void
 
     next(): Token | null {
         const token = this.current
@@ -76,7 +76,7 @@ export class TokenStream implements TokenStreamer {
             }
         }
 
-        throw this.input.croak(`Can't handle character: ${char}`)
+        throw this.input.throwError(`Can't handle character: ${char}`)
     }
 
     private readWhile(predicate: (char: string) => boolean) {

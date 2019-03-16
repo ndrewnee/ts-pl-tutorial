@@ -2,7 +2,7 @@ export interface InputStreamer {
     next(): string
     peek(): string
     eof(): boolean
-    croak(msg: string): void
+    throwError(msg: string): void
 }
 
 export class InputStream implements InputStreamer {
@@ -37,7 +37,7 @@ export class InputStream implements InputStreamer {
         return this.peek() == ""
     }
 
-    croak(msg: string) {
+    throwError(msg: string) {
         throw new Error(`${msg} (${this.line}:${this.column})`)
     }
 }
