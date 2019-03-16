@@ -1,58 +1,76 @@
 import { InputStreamer } from "./input"
 
+// TODO Replace Token | null with Maybe<Token>?
+
 export interface Token {
-    type: "number" | "keyword" | "variable" | "string"
+    type: "number" | "keyword" | "variable" | "string" | "punctuation" | "operator"
     value: string | number
 }
 
 export interface TokenStreamer {
-    next(): Token
-    peek(): Token
+    next(): Token | null
+    peek(): Token | null
     eof(): boolean
     croak(msg: string): void
 }
 
-export class TokenStream {
+export class TokenStream implements TokenStreamer {
     private input: InputStreamer
-    private current: number | null
+    private current: Token | null
     private static keywords = " if then else lambda λ true false "
-    private static ids = "?!-<>=0123456789"
+    private static identifiers = "?!-<>=0123456789"
     private static operators = "+-*/%=&|<>!"
     private static punctuations = ",;(){}[]"
     constructor(input: InputStreamer) {
         this.input = input
+        this.croak = input.croak
         this.current = null
     }
+    croak: (msg: string) => void
 
-    isKeyword(word: string): boolean {
+    next(): Token | null {
+        const token = this.current
+        this.current = null
+        return token || this.readNext()
+    }
+
+    peek(): Token | null {
+        return this.current || (this.current = this.readNext())
+    }
+
+    eof(): boolean {
+        return this.peek() == null
+    }
+
+    private isKeyword(word: string): boolean {
         return TokenStream.keywords.includes(` ${word} `)
     }
 
-    isDigit(char: string): boolean {
+    private isDigit(char: string): boolean {
         return /[0-9]/i.test(char)
     }
 
-    isIdStart(char: string): boolean {
+    private isStartOfIdentifier(char: string): boolean {
         return /[a-zλ_]/i.test(char)
     }
 
-    isId(char: string): boolean {
-        return this.isIdStart(char) || TokenStream.ids.includes(char)
+    private isIdentifier(char: string): boolean {
+        return this.isStartOfIdentifier(char) || TokenStream.identifiers.includes(char)
     }
 
-    isOperator(char: string) {
+    private isOperator(char: string) {
         return TokenStream.operators.includes(char)
     }
 
-    isPunctuation(char: string) {
+    private isPunctuation(char: string) {
         return TokenStream.punctuations.includes(char)
     }
 
-    isWhitespace(char: string) {
-        " \t\n".includes(char)
+    private isWhitespace(char: string) {
+        return " \t\n".includes(char)
     }
 
-    readWhile(predicate: (char: string) => boolean) {
+    private readWhile(predicate: (char: string) => boolean) {
         let str = ""
         while (!this.input.eof() && predicate(this.input.peek())) {
             str += this.input.next()
@@ -60,7 +78,7 @@ export class TokenStream {
         return str
     }
 
-    readNumber(): Token {
+    private readNumber(): Token {
         let hasDot = false
         const number = this.readWhile(
             (char: string): boolean => {
@@ -80,15 +98,15 @@ export class TokenStream {
         return { type: "number", value: parseFloat(number) }
     }
 
-    readIdent(): Token {
-        const id = this.readWhile(this.isId)
+    private readIdentifier(): Token {
+        const identifier = this.readWhile(this.isIdentifier)
         return {
-            type: this.isKeyword(id) ? "keyword" : "variable",
-            value: id,
+            type: this.isKeyword(identifier) ? "keyword" : "variable",
+            value: identifier,
         }
     }
 
-    readEscaped(end: string): string {
+    private readEscaped(end: string): string {
         let escaped = false
         let str = ""
         this.input.next()
@@ -115,15 +133,51 @@ export class TokenStream {
         return str
     }
 
-    readString(): Token {
+    private readString(): Token {
         return {
             type: "string",
             value: this.readEscaped('"'),
         }
     }
 
-    skipComment() {
+    private skipComment() {
         this.readWhile((char: string): boolean => char != "\n")
         this.input.next()
+    }
+
+    private readNext(): Token | null {
+        this.readWhile(this.isWhitespace)
+        if (this.input.eof()) {
+            return null
+        }
+
+        const char = this.input.peek()
+        if (char == "#") {
+            this.skipComment()
+            return this.readNext()
+        }
+        if (char == '"') {
+            return this.readString()
+        }
+        if (this.isDigit(char)) {
+            return this.readNumber()
+        }
+        if (this.isStartOfIdentifier(char)) {
+            return this.readIdentifier()
+        }
+        if (this.isPunctuation(char)) {
+            return {
+                type: "punctuation",
+                value: this.input.next(),
+            }
+        }
+        if (this.isOperator(char)) {
+            return {
+                type: "operator",
+                value: this.readWhile(this.isOperator),
+            }
+        }
+
+        throw this.input.croak(`Can't handle character: ${char}`)
     }
 }
