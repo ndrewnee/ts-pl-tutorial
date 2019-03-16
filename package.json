@@ -1,0 +1,21 @@
+{
+  "name": "ts-pl-tutorial",
+  "version": "1.0.0",
+  "description": "Studying how to implement a programming language in Typescript (http://lisperator.net/pltut/)",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/ndrewnee/ts-pl-tutorial"
+  },
+  "author": "ndrewnee",
+  "license": "MIT",
+  "devDependencies": {
+    "gulp": "^4.0.0",
+    "gulp-typescript": "^5.0.1",
+    "prettier": "^1.16.4",
+    "typescript": "^3.3.3333"
+  }
+}
