@@ -2,7 +2,7 @@ import { InputStreamer } from "./input"
 
 // TODO Replace Token | null with Maybe<Token>?
 
-export type TokenType = "number" | "keyword" | "variable" | "string" | "punctuation" | "operator"
+export type TokenType = "number" | "keyword" | "var" | "string" | "punctuation" | "operator"
 export interface Token {
     type: TokenType
     value: string | number
@@ -110,7 +110,7 @@ export class TokenStream implements TokenStreamer {
     private readIdentifier(): Token {
         const identifier = this.readWhile(this.isIdentifier)
         return {
-            type: this.isKeyword(identifier) ? "keyword" : "variable",
+            type: this.isKeyword(identifier) ? "keyword" : "var",
             value: identifier,
         }
     }

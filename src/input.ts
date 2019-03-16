@@ -37,7 +37,7 @@ export class InputStream implements InputStreamer {
         return this.peek() == ""
     }
 
-    throwError(msg: string) {
+    throwError(msg: string): void {
         throw new Error(`${msg} (${this.line}:${this.column})`)
     }
 }
