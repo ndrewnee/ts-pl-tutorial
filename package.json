@@ -10,7 +10,7 @@
     "type": "git",
     "url": "github.com/ndrewnee/ts-pl-tutorial"
   },
-  "author": "ndrewnee",
+  "author": "Andrew Nee",
   "license": "MIT",
   "devDependencies": {
     "gulp": "^4.0.0",
