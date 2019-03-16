@@ -2,3 +2,4 @@ printWidth: 100
 useTabs: false
 semi: false
 trailingComma: all
+tabWidth: 4
