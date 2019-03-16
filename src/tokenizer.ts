@@ -43,32 +43,40 @@ export class TokenStream implements TokenStreamer {
         return this.peek() == null
     }
 
-    private isKeyword(word: string): boolean {
-        return TokenStream.keywords.includes(` ${word} `)
-    }
+    private readNext(): Token | null {
+        this.readWhile(this.isWhitespace)
+        if (this.input.eof()) {
+            return null
+        }
 
-    private isDigit(char: string): boolean {
-        return /[0-9]/i.test(char)
-    }
+        const char = this.input.peek()
+        if (char == "#") {
+            this.skipComment()
+            return this.readNext()
+        }
+        if (char == '"') {
+            return this.readString()
+        }
+        if (this.isDigit(char)) {
+            return this.readNumber()
+        }
+        if (this.isStartOfIdentifier(char)) {
+            return this.readIdentifier()
+        }
+        if (this.isPunctuation(char)) {
+            return {
+                type: "punc",
+                value: this.input.next(),
+            }
+        }
+        if (this.isOperator(char)) {
+            return {
+                type: "op",
+                value: this.readWhile(this.isOperator),
+            }
+        }
 
-    private isStartOfIdentifier(char: string): boolean {
-        return /[a-zλ_]/i.test(char)
-    }
-
-    private isIdentifier(char: string): boolean {
-        return this.isStartOfIdentifier(char) || TokenStream.identifiers.includes(char)
-    }
-
-    private isOperator(char: string) {
-        return TokenStream.operators.includes(char)
-    }
-
-    private isPunctuation(char: string) {
-        return TokenStream.punctuations.includes(char)
-    }
-
-    private isWhitespace(char: string) {
-        return " \t\n".includes(char)
+        throw this.input.croak(`Can't handle character: ${char}`)
     }
 
     private readWhile(predicate: (char: string) => boolean) {
@@ -146,39 +154,31 @@ export class TokenStream implements TokenStreamer {
         this.input.next()
     }
 
-    private readNext(): Token | null {
-        this.readWhile(this.isWhitespace)
-        if (this.input.eof()) {
-            return null
-        }
+    private isKeyword(word: string): boolean {
+        return TokenStream.keywords.includes(` ${word} `)
+    }
 
-        const char = this.input.peek()
-        if (char == "#") {
-            this.skipComment()
-            return this.readNext()
-        }
-        if (char == '"') {
-            return this.readString()
-        }
-        if (this.isDigit(char)) {
-            return this.readNumber()
-        }
-        if (this.isStartOfIdentifier(char)) {
-            return this.readIdentifier()
-        }
-        if (this.isPunctuation(char)) {
-            return {
-                type: "punc",
-                value: this.input.next(),
-            }
-        }
-        if (this.isOperator(char)) {
-            return {
-                type: "op",
-                value: this.readWhile(this.isOperator),
-            }
-        }
+    private isDigit(char: string): boolean {
+        return /[0-9]/i.test(char)
+    }
 
-        throw this.input.croak(`Can't handle character: ${char}`)
+    private isStartOfIdentifier(char: string): boolean {
+        return /[a-zλ_]/i.test(char)
+    }
+
+    private isIdentifier(char: string): boolean {
+        return this.isStartOfIdentifier(char) || TokenStream.identifiers.includes(char)
+    }
+
+    private isOperator(char: string) {
+        return TokenStream.operators.includes(char)
+    }
+
+    private isPunctuation(char: string) {
+        return TokenStream.punctuations.includes(char)
+    }
+
+    private isWhitespace(char: string) {
+        return " \t\n".includes(char)
     }
 }
