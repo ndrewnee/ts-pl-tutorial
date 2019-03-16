@@ -2,8 +2,9 @@ import { InputStreamer } from "./input"
 
 // TODO Replace Token | null with Maybe<Token>?
 
+export type TokenType = "num" | "kw" | "var" | "str" | "punc" | "op"
 export interface Token {
-    type: "number" | "keyword" | "variable" | "string" | "punctuation" | "operator"
+    type: TokenType
     value: string | number
 }
 
@@ -95,13 +96,13 @@ export class TokenStream implements TokenStreamer {
             },
         )
 
-        return { type: "number", value: parseFloat(number) }
+        return { type: "num", value: parseFloat(number) }
     }
 
     private readIdentifier(): Token {
         const identifier = this.readWhile(this.isIdentifier)
         return {
-            type: this.isKeyword(identifier) ? "keyword" : "variable",
+            type: this.isKeyword(identifier) ? "kw" : "var",
             value: identifier,
         }
     }
@@ -135,7 +136,7 @@ export class TokenStream implements TokenStreamer {
 
     private readString(): Token {
         return {
-            type: "string",
+            type: "str",
             value: this.readEscaped('"'),
         }
     }
@@ -167,13 +168,13 @@ export class TokenStream implements TokenStreamer {
         }
         if (this.isPunctuation(char)) {
             return {
-                type: "punctuation",
+                type: "punc",
                 value: this.input.next(),
             }
         }
         if (this.isOperator(char)) {
             return {
-                type: "operator",
+                type: "op",
                 value: this.readWhile(this.isOperator),
             }
         }
