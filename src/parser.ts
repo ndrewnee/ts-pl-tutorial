@@ -12,9 +12,11 @@ export type ASTType =
     | "binary"
     | "program"
 
+export type ValueType = string | number | boolean
+
 export interface AST {
     type: ASTType
-    value?: string | number | boolean
+    value?: ValueType
     vars?: AST[]
     body?: AST
     func?: AST
