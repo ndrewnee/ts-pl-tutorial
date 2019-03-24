@@ -79,7 +79,7 @@ export class TokenStream implements TokenStreamer {
         throw this.input.throwError(`Can't handle character: ${char}`)
     }
 
-    private readWhile(predicate: (char: string) => boolean) {
+    private readWhile(predicate: (char: string) => boolean): string {
         let str = ""
         while (!this.input.eof() && predicate(this.input.peek())) {
             str += this.input.next()
@@ -149,7 +149,7 @@ export class TokenStream implements TokenStreamer {
         }
     }
 
-    private skipComment() {
+    private skipComment(): void {
         this.readWhile((char: string): boolean => char != "\n")
         this.input.next()
     }
@@ -170,15 +170,15 @@ export class TokenStream implements TokenStreamer {
         return this.isStartOfIdentifier(char) || TokenStream.identifiers.includes(char)
     }
 
-    private isOperator(char: string) {
+    private isOperator(char: string): boolean {
         return TokenStream.operators.includes(char)
     }
 
-    private isPunctuation(char: string) {
+    private isPunctuation(char: string): boolean {
         return TokenStream.punctuations.includes(char)
     }
 
-    private isWhitespace(char: string) {
+    private isWhitespace(char: string): boolean {
         return " \t\n".includes(char)
     }
 }

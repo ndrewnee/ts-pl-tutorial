@@ -147,7 +147,11 @@ export class DefaultParser implements Parser {
     }
 
     private parseBool(): AST {
-        throw new Error("TODO")
+        const token = <AST>this.input.next()
+        return {
+            type: "bool",
+            value: token.value == "true",
+        }
     }
 
     private parseLambda(): AST {
@@ -159,7 +163,12 @@ export class DefaultParser implements Parser {
     }
 
     private parseVarname(): AST {
-        throw new Error("TODO")
+        const name = <AST>this.input.next()
+        if (name.type != "var") {
+            this.input.throwError(`Expecting variable name`)
+        }
+
+        return <any>name.value
     }
 
     private parseExpression(): AST {
