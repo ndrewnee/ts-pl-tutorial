@@ -247,17 +247,17 @@ export function parse(input: TokenStreamer): AST {
     }
 
     function isPunctuation(char: string): Token | false | null {
-        const token = input.next()
+        const token = input.peek()
         return token && token.type == "punctuation" && (!char || token.value == char) && token
     }
 
     function isKeyword(keyword: string): Token | false | null {
-        const token = input.next()
+        const token = input.peek()
         return token && token.type == "keyword" && (!keyword || token.value == keyword) && token
     }
 
     function isOperator(operator?: string): Token | false | null {
-        const token = input.next()
+        const token = input.peek()
         return token && token.type == "operator" && (!operator || token.value == operator) && token
     }
 
