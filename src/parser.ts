@@ -1,5 +1,22 @@
 import { TokenStreamer, Token } from "./tokenizer"
 
+const PRECEDENCE = new Map<string, number>([
+    ["=", 1],
+    ["||", 2],
+    ["&&", 3],
+    ["<", 7],
+    [">", 7],
+    ["<=", 7],
+    [">=", 7],
+    ["==", 7],
+    ["!=", 7],
+    ["+", 10],
+    ["-", 10],
+    ["*", 20],
+    ["/", 20],
+    ["%", 20],
+])
+
 export type ASTType =
     | "number"
     | "string"
@@ -30,93 +47,65 @@ export interface AST {
     program?: AST[]
 }
 
-export interface Parser {
-    parse(input: string): AST
-}
-
-export class DefaultParser implements Parser {
-    private input: TokenStreamer
-    private static precedence = new Map<string, number>([
-        ["=", 1],
-        ["||", 2],
-        ["&&", 3],
-        ["<", 7],
-        [">", 7],
-        ["<=", 7],
-        [">=", 7],
-        ["==", 7],
-        ["!=", 7],
-        ["+", 10],
-        ["-", 10],
-        ["*", 20],
-        ["/", 20],
-        ["%", 20],
-    ])
-
-    constructor(input: TokenStreamer) {
-        this.input = input
+export function parse(input: TokenStreamer): AST {
+    const program: AST[] = []
+    while (!input.eof()) {
+        program.push(parseExpression())
+        if (!input.eof()) {
+            skipPunctuation(";")
+        }
     }
 
-    parse(): AST {
-        const program: AST[] = []
-        while (!this.input.eof()) {
-            program.push(this.parseExpression())
-            if (!this.input.eof()) {
-                this.skipPunctuation(";")
-            }
+    return { type: "program", program }
+
+    function parseIf(): AST {
+        skipKeyword("if")
+        const condition = parseExpression()
+        if (!isPunctuation("{")) {
+            skipKeyword("then")
         }
 
-        return { type: "program", program }
-    }
-
-    private parseIf(): AST {
-        this.skipKeyword("if")
-        const condition = this.parseExpression()
-        if (!this.isPunctuation("{")) {
-            this.skipKeyword("then")
-        }
-
-        const then = this.parseExpression()
+        const then = parseExpression()
         const ast: AST = { type: "if", condition, then }
 
-        if (this.isKeyword("else")) {
-            this.input.next()
-            ast.else = this.parseExpression()
+        if (isKeyword("else")) {
+            input.next()
+            ast.else = parseExpression()
         }
 
         return ast
     }
 
-    private parseAtom(): AST {
-        return this.maybeCall(
+    function parseAtom(): AST {
+        return maybeCall(
             (): AST => {
-                if (this.isPunctuation("(")) {
-                    this.input.next()
-                    const expresion = this.parseExpression()
-                    this.skipPunctuation(")")
+                if (isPunctuation("(")) {
+                    input.next()
+                    const expresion = parseExpression()
+                    skipPunctuation(")")
                     return expresion
                 }
 
-                if (this.isPunctuation("{")) {
-                    return this.parseProgram()
+                if (isPunctuation("{")) {
+                    return parseProgram()
                 }
 
-                if (this.isKeyword("if")) {
-                    return this.parseIf()
+                if (isKeyword("if")) {
+                    return parseIf()
                 }
 
-                if (this.isKeyword("true") || this.isKeyword("false")) {
-                    return this.parseBool()
+                if (isKeyword("true") || isKeyword("false")) {
+                    return parseBool()
                 }
 
-                if (this.isKeyword("lambda") || this.isKeyword("λ")) {
-                    this.input.next()
-                    return this.parseLambda()
+                if (isKeyword("lambda") || isKeyword("λ")) {
+                    input.next()
+                    return parseLambda()
                 }
 
-                const token = this.input.next()
+                const token = input.next()
                 if (token == null) {
-                    this.unexpected()
+                    unexpected()
                     throw new Error("unreachable")
                 }
 
@@ -127,14 +116,14 @@ export class DefaultParser implements Parser {
                     }
                 }
 
-                this.unexpected()
+                unexpected()
                 throw new Error("unreachable")
             },
         )
     }
 
-    private parseProgram(): AST {
-        const program = this.delimited("{", "}", ",", this.parseExpression)
+    function parseProgram(): AST {
+        const program = delimited("{", "}", ",", parseExpression)
         if (program.length == 0) {
             return { type: "bool", value: false }
         }
@@ -146,63 +135,63 @@ export class DefaultParser implements Parser {
         return { type: "program", program }
     }
 
-    private parseBool(): AST {
-        const token = <AST>this.input.next()
+    function parseBool(): AST {
+        const token = <AST>input.next()
         return {
             type: "bool",
             value: token.value == "true",
         }
     }
 
-    private parseLambda(): AST {
+    function parseLambda(): AST {
         return {
             type: "lambda",
-            vars: this.delimited("(", ")", ",", this.parseVarname),
-            body: this.parseExpression(),
+            vars: delimited("(", ")", ",", parseVarname),
+            body: parseExpression(),
         }
     }
 
-    private parseVarname(): AST {
-        const name = <AST>this.input.next()
+    function parseVarname(): AST {
+        const name = <AST>input.next()
         if (name.type != "var") {
-            this.input.throwError(`Expecting variable name`)
+            input.throwError(`Expecting variable name`)
         }
 
         return <any>name.value
     }
 
-    private parseExpression(): AST {
-        return this.maybeCall(() => {
-            return this.maybeBinary(this.parseAtom(), 0)
+    function parseExpression(): AST {
+        return maybeCall(() => {
+            return maybeBinary(parseAtom(), 0)
         })
     }
 
-    private parseCall(func: AST): AST {
+    function parseCall(func: AST): AST {
         return {
             type: "call",
             func: func,
-            args: this.delimited("(", ")", ",", this.parseExpression),
+            args: delimited("(", ")", ",", parseExpression),
         }
     }
 
-    private maybeCall(expression: () => AST): AST {
+    function maybeCall(expression: () => AST): AST {
         const expr = expression()
-        return this.isPunctuation("(") ? this.parseCall(expr) : expr
+        return isPunctuation("(") ? parseCall(expr) : expr
     }
 
-    private maybeBinary(left: AST, myPrecedence: number): AST {
-        const token = this.isOperator()
+    function maybeBinary(left: AST, myPrecedence: number): AST {
+        const token = isOperator()
         if (!token) {
             return left
         }
 
-        const hisPrecedence = DefaultParser.precedence.get(<string>token.value)
+        const hisPrecedence = PRECEDENCE.get(<string>token.value)
         if (!hisPrecedence || hisPrecedence <= myPrecedence) {
             return left
         }
 
-        this.input.next()
-        const right = this.maybeBinary(this.parseAtom(), hisPrecedence)
+        input.next()
+        const right = maybeBinary(parseAtom(), hisPrecedence)
         const binary: AST = {
             type: token.value == "=" ? "assign" : "binary",
             operator: <string>token.value,
@@ -210,69 +199,69 @@ export class DefaultParser implements Parser {
             right,
         }
 
-        return this.maybeBinary(binary, myPrecedence)
+        return maybeBinary(binary, myPrecedence)
     }
 
-    private delimited(start: string, stop: string, separator: string, parser: () => AST): AST[] {
+    function delimited(start: string, stop: string, separator: string, parser: () => AST): AST[] {
         const result: AST[] = []
         let first = true
-        this.skipPunctuation(start)
+        skipPunctuation(start)
 
-        while (!this.input.eof()) {
-            if (this.isPunctuation(stop)) {
+        while (!input.eof()) {
+            if (isPunctuation(stop)) {
                 break
             }
 
             if (first) {
                 first = false
             } else {
-                this.skipPunctuation(separator)
+                skipPunctuation(separator)
             }
 
-            if (this.isPunctuation(stop)) {
+            if (isPunctuation(stop)) {
                 break
             }
 
             result.push(parser())
         }
 
-        this.skipPunctuation(stop)
+        skipPunctuation(stop)
         return result
     }
 
-    private skipPunctuation(char: string): void {
-        if (this.isPunctuation(char)) {
-            this.input.next()
+    function skipPunctuation(char: string): void {
+        if (isPunctuation(char)) {
+            input.next()
             return
         }
 
-        this.input.throwError(`Expected punctuation: "${char}"`)
+        input.throwError(`Expected punctuation: "${char}"`)
     }
-    private skipKeyword(keyword: string): void {
-        if (this.isKeyword(keyword)) {
-            this.input.next()
+    function skipKeyword(keyword: string): void {
+        if (isKeyword(keyword)) {
+            input.next()
             return
         }
 
-        this.input.throwError(`Expected keyword: "${keyword}"`)
+        input.throwError(`Expected keyword: "${keyword}"`)
     }
 
-    private isPunctuation(char: string): Token | false | null {
-        const token = this.input.next()
+    function isPunctuation(char: string): Token | false | null {
+        const token = input.next()
         return token && token.type == "punctuation" && (!char || token.value == char) && token
     }
 
-    private isKeyword(keyword: string): Token | false | null {
-        const token = this.input.next()
+    function isKeyword(keyword: string): Token | false | null {
+        const token = input.next()
         return token && token.type == "keyword" && (!keyword || token.value == keyword) && token
     }
 
-    private isOperator(operator?: string): Token | false | null {
-        const token = this.input.next()
+    function isOperator(operator?: string): Token | false | null {
+        const token = input.next()
         return token && token.type == "operator" && (!operator || token.value == operator) && token
     }
 
-    private unexpected(): void {
-        this.input.throwError(`Unexpected token: ${JSON.stringify(this.input.peek())}`)
+    function unexpected(): void {
+        input.throwError(`Unexpected token: ${JSON.stringify(input.peek())}`)
     }
 }
