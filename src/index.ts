@@ -3,10 +3,20 @@ import { InputStream } from "./input"
 import { parse } from "./parser"
 import { Environment, evaluate } from "./eval"
 
-const code = "sum = lambda(x, y) x + y; print(sum(2, 3));"
-const ast = parse(TokenStream(InputStream(code)))
 const globalEnv = new Environment()
 
 globalEnv.define("print", console.log)
+globalEnv.define("println", console.log)
 
-evaluate(ast, globalEnv)
+let code = ""
+process.stdin.on("readable", () => {
+    const chunk = process.stdin.read()
+    if (chunk) {
+        code += chunk
+    }
+})
+
+process.stdin.on("end", () => {
+    const ast = parse(TokenStream(InputStream(code)))
+    evaluate(ast, globalEnv)
+})

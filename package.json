@@ -13,6 +13,7 @@
   "author": "Andrew Nee",
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^11.11.6",
     "gulp": "^4.0.0",
     "gulp-typescript": "^5.0.1",
     "prettier": "^1.16.4",
